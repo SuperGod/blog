@@ -1,0 +1,9 @@
+#+title: 关于
+#+date:: [2018-08-01T12:12:00+08:00]
+#+HUGO_DARFT: false
+---
+
+* Super's blog
+记录自己的一些日常心得
+
+邮箱: gaoshichong@gmail.com

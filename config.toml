@@ -1,8 +1,18 @@
+
+baseURL = "http://localhost:1313/"
 languageCode = "zh-cn"
 title = "Super's blog"
 theme = "even"
-enableGitInfo = false # use git commit log to generate lastmod record # 可根据 Git 中的提交生成最近更新记录。
 defaultContentLanguage = "zh-cn"
+enableRobotsTXT = true
+enableGitInfo = false # use git commit log to generate lastmod record # 可根据 Git 中的提交生成最近更新记录。
+
+# Syntax highlighting by Chroma. NOTE: Don't enable `highlightInClient` and `chroma` at the same time!
+pygmentsOptions = "linenos=table"
+pygmentsCodefences = true
+pygmentsUseClasses = true
+pygmentsCodefencesGuessSyntax = true
+
 
 hasCJKLanguage = true
 paginate = 5                                              # 首页每页显示的文章数
@@ -19,14 +29,22 @@ copyright = '<a href="https://beian.miit.gov.cn" target="_blank" class="h-logo">
   priority = 0.5
   filename = "sitemap.xml"
 
+[[menu.main]]             # config your menu              # 配置目录
+  name = "首页"
+  weight = 1
+  identifier = "home"
+  url = "/"
+
 [[menu.main]]
     name = "IT"
     url = "/categories/it"
-    weight = 1
+    identifier = "categories/it"
+    weight = 2
 [[menu.main]]
     name = "生活"
-    url = "/categories/life"
-    weight = 2
+    identifier = "categories/life"
+    url = "/categories/生活"
+    weight = 3
 [[menu.main]]
     identifier = 'about'
     name = "关于"
@@ -128,24 +146,24 @@ copyright = '<a href="https://beian.miit.gov.cn" target="_blank" class="h-logo">
     owner = ""              # Your GitHub ID
     repo = ""               # The repo to store comments
 
-  [params.gitalk]           # Gitalk is a comment system based on GitHub issues. see https://github.com/gitalk/gitalk
-    owner = ""              # Your GitHub ID
-    repo = ""               # The repo to store comments
-    clientId = ""           # Your client ID
-    clientSecret = ""       # Your client secret
+  # [params.gitalk]           # Gitalk is a comment system based on GitHub issues. see https://github.com/gitalk/gitalk
+  #   owner = ""              # Your GitHub ID
+  #   repo = ""               # The repo to store comments
+  #   clientId = ""           # Your client ID
+  #   clientSecret = ""       # Your client secret
 
   # Valine.
   # You can get your appid and appkey from https://leancloud.cn
   # more info please open https://valine.js.org
-  [params.valine]
-    enable = false
-    appId = '你的appId'
-    appKey = '你的appKey'
-    notify = false  # mail notifier , https://github.com/xCss/Valine/wiki
-    verify = false # Verification code
-    avatar = 'mm'
-    placeholder = '说点什么吧...'
-    visitor = false
+  # [params.valine]
+  #   enable = false
+  #   appId = '你的appId'
+  #   appKey = '你的appKey'
+  #   notify = false  # mail notifier , https://github.com/xCss/Valine/wiki
+  #   verify = false # Verification code
+  #   avatar = 'mm'
+  #   placeholder = '说点什么吧...'
+  #   visitor = false
 
   [params.flowchartDiagrams]# see https://blog.olowolo.com/example-site/post/js-flowchart-diagrams/
     enable = false

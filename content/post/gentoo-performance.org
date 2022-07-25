@@ -1,0 +1,175 @@
+#+title: Gentoo和Manjaro性能对比
+#+date: 2022-07-25T22:58:29+08:00
+#+draft: false
+#+categories[]: it
+#+tags[]: it
+#+author: Super
+* Gentoo or Manjaro
+Gentoo是一个定制性非常强，source-based的滚动linux发型版。
+
+Manjaro是一个基于archlinux的，新手友好的滚动发行版。
+
+从理论上看，所有的内核、软件都使用和cpu完全匹配的优化参数，性能必然要有一定的提升的，那么和常规的发行版本对比，gentoo的性能真的会好很多么？
+
+这里选择Manjaro和Gentoo做一个性能对比。
+
+
+* 使用sysbench测试
+测试结果数值越大，表示一秒内能够处理的事件数越多
+** 测试机器:
+CPU: i7-8565U
+内存: 16G
+
+** 测试场景
+为了尽量保持测试场景一致，Gentoo和Manjaro均未运行图形界面，均通过ssh登录到机器上，使用root用户进行测试
+
+** 测试脚本：
+
+#+begin_src bash
+#!/bin/bash
+for num in {1..10}
+do
+    ret=`sysbench cpu run --threads=8 --time=20 | grep "events per second" | awk -F ':' '{print $2}'`
+    echo "round$num: $ret";
+    sleep 20s
+done
+
+#+end_src
+
+** Gentoo测试结果
+Gentoo 添加了全局编译器优化参数，内核使用genkernel生成，无特殊优化
+
+sysbench 版本: sysbench 1.0.20 (using system LuaJIT 2.1.0-beta3)
+
+内核版本: Linux localhost 5.15.52-gentoo-x86_64
+
+#+begin_src bash
+localhost ~ # ./performance.sh
+round1:   8230.60
+round2:   8128.87
+round3:   8081.83
+round4:   8041.13
+round5:   8028.03
+round6:   8000.31
+round7:   7975.00
+round8:   7980.15
+round9:   7966.67
+round10:   7964.30
+#+end_src
+
+** Manjaro测试结果
+sysbench 版本: 1.0.20
+
+内核版本: Linux super-manjaro 5.15.53-1-MANJARO
+
+
+#+begin_src bash
+#测试前停掉图形界面:
+systemctl stop sddm
+#开始测试
+[super-manjaro ~]# ./performance.sh
+round1:   8095.02
+round2:   8013.19
+round3:   7971.75
+round4:   7945.08
+round5:   7933.41
+round6:   7909.61
+round7:   7908.65
+round8:   7899.83
+round9:   7891.61
+round10:   7889.74
+#+end_src
+
+** 结果
+去掉最高最低，取平均值:
+1. Gentoo: 8025.24875/s
+2. Manjaro: 7934.14125/s
+
+Gentoo相比Manjaro 要好 1.148%
+
+* Go 程序在Gentoo和Manjaro下的表现
+测试结果数值越小，表示Go程序运算的越快
+** fib 代码
+#+begin_src go
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func fib(n int) int {
+	if n == 0 {
+		return 0
+	} else if n == 1 {
+		return 1
+	} else {
+		return fib(n-1) + fib(n-2)
+	}
+}
+
+func main() {
+	for i := 0; i != 10; i++ {
+		t1 := time.Now()
+		n := fib(45)
+		dur := time.Since(t1)
+		fmt.Printf("round%d: %s %d\n", i, dur, n)
+		time.Sleep(time.Second * 2)
+	}
+
+}
+
+#+end_src
+
+** 编译
+#+begin_src bash
+CGO_ENABLED=0 go build
+#+end_src
+在archlinux机器上使用静态编译，然后复制到不同的系统中进行测试
+** Gentoo表现
+#+begin_src bash
+localhost /home/super # ./fib
+round0: 4.90119973s 1134903170
+round1: 4.902007886s 1134903170
+round2: 4.931988121s 1134903170
+round3: 4.962647157s 1134903170
+round4: 4.997738528s 1134903170
+round5: 5.020783841s 1134903170
+round6: 4.917868158s 1134903170
+round7: 4.91401672s 1134903170
+round8: 5.072878423s 1134903170
+round9: 4.91524515s 1134903170
+#+end_src
+
+** Manjaro表现
+#+begin_src bash
+[super-manjaro super]# ./fib
+round0: 5.087668039s 1134903170
+round1: 5.004715481s 1134903170
+round2: 5.023242133s 1134903170
+round3: 5.04838751s 1134903170
+round4: 5.076786801s 1134903170
+round5: 5.098964044s 1134903170
+round6: 5.09912783s 1134903170
+round7: 5.114689445s 1134903170
+round8: 5.119321548s 1134903170
+round9: 5.015114543s 1134903170
+#+end_src
+
+** 结果
+去掉最高最低，取平均值:
+1. Gentoo: 4.945286945125s
+2. Manjaro: 5.070497543125001s
+
+Gentoo相比Manjaro 要快 2.532%
+
+* 总结
+从上面的测试可以得出结论，在内核没有进行特殊优化的情况下，gentoo使用定制编译参数，性能比Manjaro要好 1%
+
+Go程序是全部静态编译的，但是在Gentoo上，运行速度也要比Manjaro要快 2%，这个是有点出乎意料的，原因暂未可知
+
+那么是否要选择Gentoo？
+
+这个还是要从实际场景出发的，用 安装软件、升级系统的时间，以及运维的复杂性， 来换取这1%~2%的性能提升，是否值得：
+1. 在常规的互联网行业，使用 微服务架构、k8s、docker容器 的场景下，这1%的性能可以忽略不计了
+2. 在嵌入式、边缘计算、高频交易 领域，这1%~2%的性能提升，还是很可观的

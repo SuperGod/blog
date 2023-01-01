@@ -98,6 +98,7 @@ func main() {
 total         23296864K
 #+end_src
 
+备注： 实际上，只有使用debug.FreeOSMemory()，才可以释放可观的内存给操作系统
 ** 换库
 使用apache官方的arrow库来试试,
 [[https://github.com/apache/arrow/tree/master/go/arrow][arrow]]

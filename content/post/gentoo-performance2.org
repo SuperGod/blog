@@ -1,0 +1,248 @@
+#+title: Gentoo/debian/docker性能对比
+#+date: 2023-06-10T16:00:00+08:00
+#+draft: false
+#+categories[]: it
+#+tags[]: it
+#+author: Super
+* Gentoo
+之前做过一期不同系统之间的性能测试:
+[[./gentoo-performance.org][Gentoo和Manjaro性能对比]]
+
+测试结果显示，Gentoo会比Manjaro性能稍高一点，并不明显。
+
+这次换了新的硬件平台，重新来一波测试：
+1. CPU: AMD 7950X 18核32线程
+2. 主板: 微星650M
+3. 内存: D5 6000MHZ 64G
+
+* 使用sysbench测试
+测试结果数值越大，表示一秒内能够处理的事件数越多
+** 测试场景
+为了尽量保持测试场景一致，Gentoo和Debian均未运行图形界面，均通过ssh登录到机器上，使用root用户进行测试
+
+** 测试脚本：
+这次的测试脚本添加一个运行线程数参数，每次执行sysbench后，sleep 20s,让CPU充分散热、恢复状态
+
+#+begin_src bash
+#!/bin/bash
+threads=$@
+
+for t in $threads
+do
+    echo "run with ${t} threads"
+    temp=''
+    for num in {1..10}
+    do
+        ret=`sysbench cpu run --threads=${t} --time=1 | grep "events per second" | awk -F ':' '{print $2}'`
+        a=""
+        if [[ -z $temp ]];
+        then
+            a="$ret"
+        else
+            a="$temp,$ret"
+        fi
+        echo "$t threads round$num: $ret";
+        temp="$a"
+        sleep 20s
+    done
+    python -c "import statistics;rets=[$temp];print('$t threads mean:',statistics.mean(rets)/$t, 'median:',statistics.median(rets)/$t)"
+done
+#+end_src
+
+执行:
+
+```
+bash bench.sh 1 4 8 16 32
+```
+** 测试结果
+1. Gentoo 添加了全局编译器优化参数，内核使用dist内核，无特殊优化
+
+sysbench 版本: sysbench 1.0.20
+
+内核版本:  6.1.31-gentoo-dist
+
+2. gentoo 上用docker 跑debian:
+
+```
+   docker run -it --rm -v `pwd`:/data debian /bin/bash
+   apt-get update
+   apt-get install sysbench python3
+   ln -s /usr/bin/python3 /usr/bin/python
+```
+
+3. gentoo 上用docker 跑archlinux:
+
+```
+   docker run -it --rm -v `pwd`:/data debian /bin/bash
+   pacman -Syu
+   pacman -S sysbench libaio python
+```
+
+4. debian系统直接测试
+sysbench 版本: sysbench 1.0.20
+内核版本: 6.1.0-9-amd64
+
+
+| 测试环境                     | 线程数 |    测试结果 平均值 |    测试结果 中位数 |
+|------------------------------+--------+--------------------+--------------------|
+| gentoo                       |      1 |           7476.464 |           7468.455 |
+|                              |      4 |           7223.333 |           7226.795 |
+|                              |      8 |           7084.314 |            7100.37 |
+|                              |     16 |         6328.97475 |       6247.6421875 |
+|                              |     32 |       3462.5218125 | 3479.5318749999997 |
+| gentoo上用docker 跑debian    |      1 |           6595.985 |           6601.225 |
+|                              |      4 |          6623.5235 |         6623.64625 |
+|                              |      8 |        6519.389375 | 6524.0337500000005 |
+|                              |     16 | 5292.8791249999995 | 5265.5756249999995 |
+|                              |     32 |      3407.39265625 |           3408.085 |
+| gentoo上用docker跑 archlinux |      1 |           7049.959 |           7053.365 |
+|                              |      4 |          6776.7735 |            6791.49 |
+|                              |      8 |        6618.307125 |            6617.46 |
+|                              |     16 |       5008.9671875 | 4812.4037499999995 |
+|                              |     32 |        3401.683125 | 3401.8531249999996 |
+| debian                       |      1 |           6715.035 |            6699.92 |
+|                              |      4 |         6682.48575 |         6683.23875 |
+|                              |      8 |        6545.394375 |          6556.5525 |
+|                              |     16 |       5902.7268125 |       5901.4640625 |
+|                              |     32 |        3455.363875 |      3455.70984375 |
+
+
+
+** 结果
+从上面的数据可以得出以下结论：
+1. 按照中位数来看，c/c++程序 gentoo系统比debian系统性能要高出 11.47%-
+2. 在负载比较轻时(线程数<=8)，gentoo上用docker 跑archlinux系统，c/c++程序会有一定的性能损失 5%-6% 左右,docker中跑debian系统，性能损失会在8%-12%
+3. 负载比较重时(线程数=16),gentoo上用docker archlinux 和 debian 差别不大，和gentoo系统直接运行性能损失>15%
+4. 满载时(线程=32)，gentoo上用docker跑archlinux和debian相差不大，和gentoo系统直接运行性能损失 3%以内
+5. 未满载时(线程<=16),debian系统比gentoo系统性能要低 5%-11%
+6. 满载时(线程=32)，debian系统比gentoo系统性能低 不到 1%
+
+总结下来，应该是：
+针对c/c++实现的程序：
+1. 系统性能不满载，性能发挥的越充分，gentoo这种修改编译参数的系统表现越出色，archlinux这种有优化的系统表现次之，debian变现最差
+2. 系统负荷满载时，gentoo和debian的差距会变得非常小
+
+
+
+* Go 程序在Gentoo和Manjaro下的表现
+测试结果数值越小，表示Go程序运算的越快
+** fib 代码
+#+begin_src go
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func fib(n int) int {
+	if n == 0 {
+		return 0
+	} else if n == 1 {
+		return 1
+	} else {
+		return fib(n-1) + fib(n-2)
+	}
+}
+
+func main() {
+	for i := 0; i != 10; i++ {
+		t1 := time.Now()
+		n := fib(45)
+		dur := time.Since(t1)
+		fmt.Printf("round%d: %s %d\n", i, dur, n)
+		time.Sleep(time.Second * 2)
+	}
+
+}
+
+#+end_src
+
+** 编译
+#+begin_src bash
+go build
+#+end_src
+在gentoo机器上使用静态编译，然后复制到不同的系统中进行测试
+
+| 测试环境                     | 测试结果 平均值 |   测试结果 中位数 |
+|------------------------------+-----------------+-------------------|
+| gentoo                       |    4.2641403323 |      4.2641085595 |
+| gentoo上用docker 跑debian    |    4.2635594783 |       4.263489193 |
+| gentoo上用docker 跑archlinux |    4.2831701706 | 4.283115008999999 |
+| debian                       |    4.2580687876 | 4.258068339499999 |
+
+详细测试信息如下：
+
+1. gentoo:
+
+```
+round0: 4.264416484s 1134903170
+round1: 4.263989555s 1134903170
+round2: 4.263838368s 1134903170
+round3: 4.264546514s 1134903170
+round4: 4.264680745s 1134903170
+round5: 4.263897487s 1134903170
+round6: 4.263466937s 1134903170
+round7: 4.264722494s 1134903170
+round8: 4.264227564s 1134903170
+round9: 4.263617175s 1134903170
+```
+
+2. docker debian on gentoo
+
+```
+round0: 4.262537085s 1134903170
+round1: 4.263482391s 1134903170
+round2: 4.264658519s 1134903170
+round3: 4.264080058s 1134903170
+round4: 4.263067803s 1134903170
+round5: 4.263495995s 1134903170
+round6: 4.264000756s 1134903170
+round7: 4.264084747s 1134903170
+round8: 4.263144941s 1134903170
+round9: 4.263042488s 113490317
+```
+
+3. docker archlinux on gentoo
+
+```
+round0: 4.282910351s 1134903170
+round1: 4.283800774s 1134903170
+round2: 4.284423099s 1134903170
+round3: 4.282878721s 1134903170
+round4: 4.283338228s 1134903170
+round5: 4.283612673s 1134903170
+round6: 4.283319667s 1134903170
+round7: 4.282184318s 1134903170
+round8: 4.282757226s 1134903170
+round9: 4.282476649s 1134903170
+```
+
+4. debian:
+
+```
+round0: 4.258940865s 1134903170
+round1: 4.258303035s 1134903170
+round2: 4.259423476s 1134903170
+round3: 4.258267905s 1134903170
+round4: 4.257156714s 1134903170
+round5: 4.257495644s 1134903170
+round6: 4.257556784s 1134903170
+round7: 4.257406774s 1134903170
+round8: 4.258002094s 1134903170
+round9: 4.258134585s 1134903170
+```
+** 结论
+针对go这种非c/c++语言，在gentoo上进行编译/运行，并不能够对性能有什么提升，且在docker、gentoo、debian中的表现基本一致，性能差异不超过1%
+* 总结
+从上面的测试可以得出结论：
+
+*** 针对c/c++实现的程序:
+
+1. 在内核没有进行特殊优化的情况下，gentoo使用定制编译参数，性能比debian要好 很多
+2. 当系统满载时，不同系统的性能差距会缩小
+3. cpu本身性能越高，对c/c++实现的程序，不同编译参数造成的性能差距越大
+4. docker本身性能损耗非常小，可能更多的性能损耗还是在不同编译参数编译出来的系统库
+
+*** 针对Go程序:
+1. Go程序是全部静态编译的，但是在Gentoo上，和debian中、docker中运行，性能损耗<1%

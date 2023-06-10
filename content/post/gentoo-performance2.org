@@ -6,7 +6,7 @@
 #+author: Super
 * Gentoo
 之前做过一期不同系统之间的性能测试:
-[[./gentoo-performance.org][Gentoo和Manjaro性能对比]]
+[[../gentoo-performance][Gentoo和Manjaro性能对比]]
 
 测试结果显示，Gentoo会比Manjaro性能稍高一点，并不明显。
 
@@ -51,9 +51,10 @@ done
 
 执行:
 
-```
+#+begin_src  bash
 bash bench.sh 1 4 8 16 32
-```
+#+end_src
+
 ** 测试结果
 1. Gentoo 添加了全局编译器优化参数，内核使用dist内核，无特殊优化
 
@@ -63,20 +64,20 @@ sysbench 版本: sysbench 1.0.20
 
 2. gentoo 上用docker 跑debian:
 
-```
+#+begin_src bash
    docker run -it --rm -v `pwd`:/data debian /bin/bash
    apt-get update
    apt-get install sysbench python3
    ln -s /usr/bin/python3 /usr/bin/python
-```
+#+end_src
 
 3. gentoo 上用docker 跑archlinux:
 
-```
+#+begin_src bash
    docker run -it --rm -v `pwd`:/data debian /bin/bash
    pacman -Syu
    pacman -S sysbench libaio python
-```
+#+end_src
 
 4. debian系统直接测试
 sysbench 版本: sysbench 1.0.20
@@ -175,7 +176,7 @@ go build
 
 1. gentoo:
 
-```
+#+begin_src bash
 round0: 4.264416484s 1134903170
 round1: 4.263989555s 1134903170
 round2: 4.263838368s 1134903170
@@ -186,11 +187,12 @@ round6: 4.263466937s 1134903170
 round7: 4.264722494s 1134903170
 round8: 4.264227564s 1134903170
 round9: 4.263617175s 1134903170
-```
+#+end_src
+
 
 2. docker debian on gentoo
 
-```
+#+begin_src bash
 round0: 4.262537085s 1134903170
 round1: 4.263482391s 1134903170
 round2: 4.264658519s 1134903170
@@ -201,11 +203,12 @@ round6: 4.264000756s 1134903170
 round7: 4.264084747s 1134903170
 round8: 4.263144941s 1134903170
 round9: 4.263042488s 113490317
-```
+#+end_src
+
 
 3. docker archlinux on gentoo
 
-```
+#+begin_src bash
 round0: 4.282910351s 1134903170
 round1: 4.283800774s 1134903170
 round2: 4.284423099s 1134903170
@@ -216,11 +219,12 @@ round6: 4.283319667s 1134903170
 round7: 4.282184318s 1134903170
 round8: 4.282757226s 1134903170
 round9: 4.282476649s 1134903170
-```
+#+end_src
+
 
 4. debian:
 
-```
+#+begin_src bash
 round0: 4.258940865s 1134903170
 round1: 4.258303035s 1134903170
 round2: 4.259423476s 1134903170
@@ -231,7 +235,8 @@ round6: 4.257556784s 1134903170
 round7: 4.257406774s 1134903170
 round8: 4.258002094s 1134903170
 round9: 4.258134585s 1134903170
-```
+#+end_src
+
 ** 结论
 针对go这种非c/c++语言，在gentoo上进行编译/运行，并不能够对性能有什么提升，且在docker、gentoo、debian中的表现基本一致，性能差异不超过1%
 * 总结

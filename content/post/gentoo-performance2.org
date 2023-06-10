@@ -56,13 +56,14 @@ bash bench.sh 1 4 8 16 32
 #+end_src
 
 ** 测试结果
-1. Gentoo 添加了全局编译器优化参数，内核使用dist内核，无特殊优化
+*** Gentoo
+添加了全局编译器优化参数，内核使用dist内核，无特殊优化
 
 sysbench 版本: sysbench 1.0.20
 
 内核版本:  6.1.31-gentoo-dist
 
-2. gentoo 上用docker 跑debian:
+*** gentoo 上用docker 跑debian
 
 #+begin_src bash
    docker run -it --rm -v `pwd`:/data debian /bin/bash
@@ -71,7 +72,7 @@ sysbench 版本: sysbench 1.0.20
    ln -s /usr/bin/python3 /usr/bin/python
 #+end_src
 
-3. gentoo 上用docker 跑archlinux:
+*** gentoo 上用docker 跑archlinux:
 
 #+begin_src bash
    docker run -it --rm -v `pwd`:/data debian /bin/bash
@@ -79,7 +80,7 @@ sysbench 版本: sysbench 1.0.20
    pacman -S sysbench libaio python
 #+end_src
 
-4. debian系统直接测试
+*** debian系统直接测试
 sysbench 版本: sysbench 1.0.20
 内核版本: 6.1.0-9-amd64
 
@@ -125,7 +126,7 @@ sysbench 版本: sysbench 1.0.20
 
 
 
-* Go 程序在Gentoo和Manjaro下的表现
+* Go 程序在不同场景下的表现
 测试结果数值越小，表示Go程序运算的越快
 ** fib 代码
 #+begin_src go
@@ -172,9 +173,9 @@ go build
 | gentoo上用docker 跑archlinux |    4.2831701706 | 4.283115008999999 |
 | debian                       |    4.2580687876 | 4.258068339499999 |
 
-详细测试信息如下：
+** 详细测试信息如下：
 
-1. gentoo:
+*** gentoo:
 
 #+begin_src bash
 round0: 4.264416484s 1134903170
@@ -190,7 +191,7 @@ round9: 4.263617175s 1134903170
 #+end_src
 
 
-2. docker debian on gentoo
+*** docker debian on gentoo
 
 #+begin_src bash
 round0: 4.262537085s 1134903170
@@ -206,7 +207,7 @@ round9: 4.263042488s 113490317
 #+end_src
 
 
-3. docker archlinux on gentoo
+*** docker archlinux on gentoo
 
 #+begin_src bash
 round0: 4.282910351s 1134903170
@@ -222,7 +223,7 @@ round9: 4.282476649s 1134903170
 #+end_src
 
 
-4. debian:
+*** debian:
 
 #+begin_src bash
 round0: 4.258940865s 1134903170
